@@ -25,7 +25,20 @@ namespace Microsoft.Xna.Framework.Media
             Task.Run(async () =>
             {
                 if (musicFolder == null)
-                    musicFolder = KnownFolders.MusicLibrary;
+                {
+                    try
+                    {
+                        musicFolder = KnownFolders.MusicLibrary;
+                    }
+                    catch (Exception e)
+                    {
+                        Debug.WriteLine("Failed to access Music Library: " + e.Message);
+                        albumCollection = new AlbumCollection(new List<Album>());
+                        songCollection = new SongCollection(new List<Song>());
+                        return;
+                    }
+                }
+                    
             
                 var files = new List<StorageFile>();
                 await this.GetAllFiles(musicFolder, files);
@@ -41,10 +54,11 @@ namespace Microsoft.Xna.Framework.Media
 
                 // Read cache
                 var cacheFile = await ApplicationData.Current.TemporaryFolder.CreateFileAsync(CacheFile, CreationCollisionOption.OpenIfExists);
-                using (var stream = new BinaryReader(await cacheFile.OpenStreamForReadAsync()))
+                using (var baseStream = await cacheFile.OpenStreamForReadAsync())
+                using (var stream = new BinaryReader(baseStream))
                     try
                     {
-                        for (; stream.BaseStream.Position < stream.BaseStream.Length; )
+                        for (; baseStream.Position < baseStream.Length; )
                         {
                             var entry = MusicProperties.Deserialize(stream);
                             cache.Add(entry.Path, entry);
